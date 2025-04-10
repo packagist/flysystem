@@ -208,6 +208,63 @@ class AsyncAwsS3AdapterTest extends FilesystemAdapterTestCase
     /**
      * @test
      */
+    public function delete_a_directory_with_special_chars(): void
+    {
+/*        $xml = new \XMLWriter();
+        $xml->openMemory();
+        $xml->startDocument('1.0', 'UTF-8');
+
+        $xml->startElement('span');
+        $xml->text('a " quote');
+        $xml->endElement();
+
+        $xml->endDocument();
+
+        var_dump($xml->outputMemory());
+        exit;
+
+        $document = new \DOMDocument('1.0', 'UTF-8');
+        $document->appendChild($el = $document->createElement('span'));
+        $el->appendChild($document->createEntityReference('quot'));
+        $body = $document->saveXML();
+
+        file_put_contents('/tmp/xyz.txt', $body);
+        var_dump($body);
+        exit;*/
+
+        $adapter = $this->adapter();
+
+        $specials = [
+            "'" => '&apos',
+            '"' => '&quot',
+            '&' => '&amp',
+            '<' => '&lt',
+            '>' => '&gt',
+            //"\r"  => '&#13', //; or &#x0D
+            //"\n"  => '&#10', // &#x0A
+        ];
+        $config = new Config();
+
+        $counter = 1;
+        foreach ($specials as $specialChar => $expectedReplacement) {
+            $key = sprintf('folder/filename-%d-with-%s-special', $counter, $specialChar);
+            $adapter->write($key, 'some contents', $config);
+            $counter++;
+        }
+
+        self::assertTrue($adapter->directoryExists('folder'));
+
+        $adapter->deleteDirectory('folder');
+
+        if ($adapter->directoryExists('folder')) {
+            $contents = iterator_to_array($adapter->listContents('folder', true));
+            self::fail('The directory should have been deleted. Files left are: '.print_r($contents, true));
+        }
+    }
+
+    /**
+     * @test
+     */
     public function fetching_unknown_mime_type_of_a_file(): void
     {
         $this->adapter();
